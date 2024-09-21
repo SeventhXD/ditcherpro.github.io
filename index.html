@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DitcherPro</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #e0f7fa;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        header {
+            background-color: #00796b;
+            color: white;
+            padding: 20px;
+        }
+        main {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+        }
+        footer {
+            background-color: #00796b;
+            color: white;
+            padding: 10px;
+        }
+        #map {
+            height: 400px;
+            width: 100%;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+            background-color: #004d40;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #00332a;
+        }
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        #loadingMessage {
+            font-family: monospace;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        #shellOutput {
+            font-family: monospace;
+            font-size: 18px;
+            color: lightgray;
+            white-space: pre-wrap; /* Ensure text wraps */
+            margin-top: 10px;
+        }
+        #hackerMessage {
+            margin-top: 20px;
+            font-family: monospace;
+            color: green;
+            white-space: pre;
+            display: none;
+            background-color: black;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #addressInput {
+            width: 300px;
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>DitcherPro</h1>
+    </header>
+
+    <main>
+        <input type="text" id="addressInput" placeholder="Enter your address..." />
+        <button id="findHouses">Find Houses</button>
+        <div id="map"></div>
+        <audio id="doorbellSound" src="doorbell.mp3"></audio>
+        <audio id="loadingSound" src="loading.mp3"></audio>
+        <div id="hackerMessage"></div>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 DitcherPro. All rights reserved.</p>
+    </footer>
+
+    <div id="loadingScreen">
+        <div id="loadingMessage">Loading...</div>
+        <div id="shellOutput"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map').setView([38.8977, -77.0365], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        document.getElementById('findHouses').addEventListener('click', () => {
+            const userAddress = document.getElementById('addressInput').value.trim();
+            const loadingScreen = document.getElementById('loadingScreen');
+            const shellOutput = document.getElementById('shellOutput');
+            loadingScreen.style.display = 'flex'; // Show loading screen
+            document.getElementById('loadingSound').play(); // Play loading sound
+            shellOutput.innerText = ''; // Clear previous output
+
+            // Simulate loading messages
+            const messages = [
+                "Getting into network...",
+                "Brute forcing...",
+                "Bypassing security protocols...",
+                "Connecting to doorbell system...",
+            ];
+            let index = 0;
+
+            const interval = setInterval(() => {
+                if (index < messages.length) {
+                    shellOutput.innerText += messages[index++] + '\n'; // Append messages
+                } else {
+                    clearInterval(interval);
+                }
+            }, 750); // Change message every 0.75 seconds
+
+            // Wait for 3 seconds before making the fetch call
+            setTimeout(() => {
+                loadingScreen.style.display = 'none'; // Hide loading screen
+                fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(userAddress)}&format=json&addressdetails=1&limit=1`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            const userCoords = [
+                                parseFloat(data[0].lat),
+                                parseFloat(data[0].lon)
+                            ];
+
+                            map.eachLayer(layer => {
+                                if (layer instanceof L.Marker) {
+                                    map.removeLayer(layer);
+                                }
+                            });
+
+                            map.setView(userCoords, 15);
+                            L.marker(userCoords).addTo(map).bindPopup(
+                                `<strong>${data[0].display_name}</strong><br><button onclick="ringDoorbell()">Ring Doorbell</button>`
+                            ).openPopup();
+                        } else {
+                            alert('Geocoding failed. Please check your address or try a different one.');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error:', err);
+                        alert('Something went wrong with the geocoding service.');
+                    });
+            }, 3000); // Wait for 3 seconds
+        });
+
+        function ringDoorbell() {
+            document.getElementById('doorbellSound').play();
+            const fakeIP = `192.168.1.${Math.floor(Math.random() * 255)}`;
+            const hackerMessage = `
+Connected to doorbell at ${fakeIP}
+            `;
+            const messageDiv = document.getElementById('hackerMessage');
+            messageDiv.innerText = hackerMessage;
+            messageDiv.style.display = 'block'; // Show the message
+        }
+    </script>
+
+</body>
+</html>
